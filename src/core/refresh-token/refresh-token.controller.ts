@@ -1,0 +1,55 @@
+import {
+  Controller,
+  Post,
+  Body,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
+import type { Response } from 'express';
+import { COOKIE_MAX_AGE } from '../../config/consts';
+import { RefreshTokenService } from './refresh-token.service';
+import { UsersService } from '../../users/users.service';
+
+@Controller('auth/refresh')
+export class RefreshTokenController {
+  constructor(
+    private refreshTokenService: RefreshTokenService,
+    private userService: UsersService,
+  ) {}
+
+  @Post()
+  async refresh(
+    @Body('refreshToken') refreshToken: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const accessToken =
+      await this.refreshTokenService.refreshAccessToken(refreshToken);
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict' as const,
+      path: '/',
+    });
+    return { success: true };
+  }
+
+  @Post('revoke')
+  async revoke(@Body('refreshToken') refreshToken: string) {
+    await this.refreshTokenService.revokeToken(refreshToken);
+    return { success: true };
+  }
+
+  @Post('create')
+  async create(@Body('userId') userId: string) {
+    const user = await this.userService.findOne(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const token = await this.refreshTokenService.createRefreshToken(
+      user,
+      COOKIE_MAX_AGE as number,
+    );
+    return { refreshToken: token };
+  }
+}
