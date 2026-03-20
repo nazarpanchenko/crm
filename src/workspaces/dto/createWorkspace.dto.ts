@@ -2,14 +2,17 @@ import {
   IsArray,
   IsNotEmpty,
   IsString,
+  IsUUID,
   MaxLength,
   MinLength,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-import { User } from 'src/users/entities/user.entity';
-
+class UserIdDto {
+  @IsUUID('4')
+  id!: string;
+}
 export class CreateWorkspaceDto {
   @IsString()
   @IsNotEmpty({ message: 'Workspace name must not be empty' })
@@ -21,6 +24,6 @@ export class CreateWorkspaceDto {
 
   @IsArray({ message: 'Users must be an array' })
   @ValidateNested({ each: true })
-  @Type(() => User)
-  users!: User[];
+  @Type(() => UserIdDto) // ← use minimal DTO, not the full entity
+  users!: UserIdDto[];
 }

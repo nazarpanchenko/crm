@@ -15,7 +15,6 @@ export function WorkspaceRoleGuardFactory(
   class RoleGuard implements CanActivate {
     canActivate(context: ExecutionContext): boolean {
       const request: AuthRequest = context.switchToHttp().getRequest();
-
       if (!request.user) throw new ForbiddenException('User not authenticated');
 
       const workspaceId = request.params['workspaceId'];

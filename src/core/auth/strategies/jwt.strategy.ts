@@ -6,6 +6,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Repository } from 'typeorm';
 
+import { AuthRequest } from 'src/shared/types/auth.types';
 import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
@@ -28,7 +29,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: { sub: string; memberships?: any[] }) {
+  // jwt.strategy.ts
+  async validate(payload: { sub: string }): Promise<AuthRequest['user']> {
     const user = await this.userRepo.findOne({
       where: { id: payload.sub },
       relations: ['memberships', 'memberships.workspace'],
@@ -36,7 +38,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user) throw new UnauthorizedException();
 
     return {
-      id: user.id,
+      sub: user.id,
+      emailVerified: user.emailVerified,
       memberships: user.memberships.map((m) => ({
         workspaceId: m.workspace.id,
         role: m.role,

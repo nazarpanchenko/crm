@@ -29,6 +29,35 @@ export class WorkspacesService {
     private mailService: MailService,
   ) {}
 
+  async create(dto: CreateWorkspaceDto, creatorId: string) {
+    const users = await this.userRepo.findByIds(dto.users.map((u) => u.id));
+    const creator = await this.userRepo.findOneOrFail({
+      where: { id: creatorId },
+    });
+    const workspace = this.workspaceRepo.create({ name: dto.name });
+    const saved = await this.workspaceRepo.save(workspace);
+
+    const memberships = [
+      this.membershipRepo.create({
+        user: creator,
+        workspace: saved,
+        role: WorkspaceRole.ADMIN, // workspace owner should always be 'ADMIN'
+      }),
+      ...users
+        .filter((u) => u.id !== creatorId)
+        .map((user) =>
+          this.membershipRepo.create({
+            user,
+            workspace: saved,
+            role: WorkspaceRole.MANAGER,
+          }),
+        ),
+    ];
+
+    await this.membershipRepo.save(memberships);
+    return saved;
+  }
+
   async inviteManager(
     workspaceId: string,
     email: string,
@@ -40,13 +69,11 @@ export class WorkspacesService {
 
     const user = await this.userRepo.findOne({ where: { email } });
     if (user) {
-      // Existing user: check for existing membership
       const existing = await this.membershipRepo.findOne({
         where: { user: { id: user.id }, workspace: { id: workspaceId } },
       });
       if (existing) return { message: 'User is already a member' };
 
-      // Create membership
       const membership = this.membershipRepo.create({
         user,
         workspace,
@@ -56,7 +83,6 @@ export class WorkspacesService {
       return { message: `User ${email} invited as manager` };
     }
 
-    // Non-registered user: create InvitationToken
     const token = randomInt(100000, 999999).toString();
     const expiresAt = new Date(Date.now() + Number(COOKIE_MAX_AGE));
     const invitationToken = this.invitationTokenRepo.create({
@@ -68,12 +94,6 @@ export class WorkspacesService {
     await this.invitationTokenRepo.save(invitationToken);
     await this.mailService.sendInvitation(email, token, workspace.name);
     return { message: `Invitation sent to ${email}` };
-  }
-
-  async create(workspaceData: CreateWorkspaceDto) {
-    const workspace = new Workspace();
-    workspace.name = workspaceData.name;
-    return await this.workspaceRepo.save(workspace);
   }
 
   async findAll() {

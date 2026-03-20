@@ -4,20 +4,13 @@ import {
   ExecutionContext,
   ForbiddenException,
 } from '@nestjs/common';
-import { Request } from 'express';
 
-interface JwtPayload {
-  sub: string; // user ID
-  memberships: { workspaceId: string; role: string }[];
-}
+import { AuthRequest } from 'src/shared/types/auth.types';
 
 @Injectable()
 export class WorkspaceAccessGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request: Request & { user?: JwtPayload } = context
-      .switchToHttp()
-      .getRequest();
-
+    const request: AuthRequest = context.switchToHttp().getRequest();
     if (!request.user) {
       throw new ForbiddenException('User not authenticated');
     }
