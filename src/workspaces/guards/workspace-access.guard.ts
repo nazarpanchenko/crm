@@ -12,12 +12,12 @@ export class WorkspaceAccessGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request: AuthRequest = context.switchToHttp().getRequest();
     if (!request.user) {
-      throw new ForbiddenException('User not authenticated');
+      throw new ForbiddenException('User is not authenticated');
     }
 
     const workspaceId = request.params['workspaceId'];
     if (!workspaceId) {
-      throw new ForbiddenException('Workspace ID missing in request');
+      throw new ForbiddenException('Workspace ID is missing in request');
     }
 
     const hasAccess = request.user.memberships.some(

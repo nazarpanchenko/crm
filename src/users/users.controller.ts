@@ -18,8 +18,8 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
-  // For testing purposes only
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }

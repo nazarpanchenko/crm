@@ -13,11 +13,10 @@ import { JwtStrategy } from 'src/core/auth/strategies/jwt.strategy';
 import { RefreshTokenModule } from 'src/core/refresh-token/refresh-token.module';
 import { MailTokenService } from 'src/core/mail/mail-token.service';
 import { UsersModule } from 'src/users/users.module';
+import { UserEmail } from 'src/users/entities/user-email.entity';
 import { MailModule } from 'src/core/mail/mail.module';
 import { MailToken } from 'src/core/mail/entities/mail-token.entity';
-import { RefreshToken } from 'src/core/refresh-token/entities/refresh-token.entity';
 import { Membership } from 'src/workspaces/entities/membership.entity';
-import { UserEmail } from 'src/users/entities/user-email.entity';
 
 @Module({
   imports: [
@@ -26,7 +25,6 @@ import { UserEmail } from 'src/users/entities/user-email.entity';
       UserEmail,
       Workspace,
       MailToken,
-      RefreshToken,
       Membership,
     ]),
     ConfigModule,

@@ -18,4 +18,5 @@ export type AuthRequest = Request & {
     memberships: { workspaceId: string; role: WorkspaceRole }[];
   };
 };
+
 export type TokenPayload = { id?: string; email?: string };

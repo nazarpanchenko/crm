@@ -15,14 +15,14 @@ import { CreateWorkspaceDto } from 'src/workspaces/dto/createWorkspace.dto';
 import { JwtAuthGuard } from 'src/core/auth/guards/jwt-auth.guard';
 import { WorkspaceAccessGuard } from 'src/workspaces/guards/workspace-access.guard';
 import { WorkspaceRoleGuardFactory } from 'src/workspaces/guards/workspace-role.guard';
-import { EmailVerifiedGuard } from 'src/core/mail/guards/mail-verify.guard';
+import { MailVerifiedGuard } from 'src/core/mail/guards/mail-verify.guard';
 
 @Controller('workspaces')
 export class WorkspacesController {
   constructor(private readonly workspaceService: WorkspacesService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, EmailVerifiedGuard)
+  @UseGuards(JwtAuthGuard, MailVerifiedGuard)
   async create(@Body() dto: CreateWorkspaceDto, @Req() req: AuthRequest) {
     return this.workspaceService.create(dto, req.user!.sub);
   }

@@ -21,7 +21,8 @@ import { LocalAuthGuard } from 'src/core/auth/guards/local-auth.guard';
 import { JwtAuthGuard } from 'src/core/auth/guards/jwt-auth.guard';
 import { ForgotPasswordDto } from 'src/core/auth/dto/forgot-password.dto';
 import { ResetPasswordDto } from 'src/core/auth/dto/reset-password.dto';
-import { AddSecondaryEmailDto } from '../mail/dto/secondary-email.dto';
+import { AddSecondaryEmailDto } from 'src/core/mail/dto/secondary-email.dto';
+import { RefreshTokenService } from 'src/core/refresh-token/refresh-token.service';
 
 interface AuthRequest extends Request {
   user: User;
@@ -29,7 +30,10 @@ interface AuthRequest extends Request {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private refreshTokenService: RefreshTokenService,
+  ) {}
 
   @Post('signup')
   signup(@Body() dto: SignupDto) {
@@ -77,7 +81,12 @@ export class AuthController {
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(204)
-  logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const accessToken = (req.cookies as Record<string, string | undefined>)
+      .access_token;
+    const refreshToken = (req.cookies as Record<string, string | undefined>)
+      .refresh_token;
+
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -86,6 +95,9 @@ export class AuthController {
     };
     res.clearCookie('access_token', cookieOptions);
     res.clearCookie('refresh_token', cookieOptions);
+
+    if (accessToken) this.refreshTokenService.revokeAccessToken(accessToken);
+    if (refreshToken) await this.refreshTokenService.revokeToken(refreshToken);
   }
 
   @Post('forgot-password')
@@ -102,7 +114,7 @@ export class AuthController {
     );
   }
 
-  @Post('email/add')
+  @Post('email/add-secondary')
   @UseGuards(JwtAuthGuard)
   async addSecondaryEmail(
     @Req() req: Request,

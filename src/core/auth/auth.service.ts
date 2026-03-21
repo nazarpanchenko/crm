@@ -3,12 +3,12 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomInt } from 'crypto';
 import { randomBytes } from 'crypto';
+import { Repository } from 'typeorm';
 
 import {
   COOKIE_MAX_AGE,
@@ -62,7 +62,7 @@ export class AuthService {
     private jwtService: JwtService,
     private mailService: MailService,
     private refreshTokenService: RefreshTokenService,
-    @InjectRepository(MailToken) private userEmailRepo: Repository<UserEmail>,
+    @InjectRepository(UserEmail) private userEmailRepo: Repository<UserEmail>,
     private mailTokenService: MailTokenService,
   ) {}
 
@@ -280,7 +280,7 @@ export class AuthService {
       where: { email: tokenPayload.email, user: { id: user.id } },
     });
     if (!emailEntity) {
-      throw new UnauthorizedException('Invalid token payload');
+      throw new UnauthorizedException('Email is missing in token payload');
     }
 
     emailEntity.isVerified = true;

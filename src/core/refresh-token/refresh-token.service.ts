@@ -4,12 +4,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
-import { SALT_ROUNDS } from '../../config/consts';
-import { RefreshToken } from './entities/refresh-token.entity';
-import { User } from '../../users/entities/user.entity';
+
+import { SALT_ROUNDS } from 'src/config/consts';
+import { RefreshToken } from 'src/core/refresh-token/entities/refresh-token.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class RefreshTokenService {
+  private revokedAccessTokens = new Set<string>();
+
   constructor(
     @InjectRepository(RefreshToken)
     private refreshTokenRepo: Repository<RefreshToken>,
@@ -69,5 +72,13 @@ export class RefreshTokenService {
         await this.refreshTokenRepo.delete(t.id);
       }
     }
+  }
+
+  revokeAccessToken(token: string): void {
+    this.revokedAccessTokens.add(token);
+  }
+
+  isTokenRevoked(token: string): boolean {
+    return this.revokedAccessTokens.has(token);
   }
 }

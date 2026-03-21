@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+
 import { AuthRequest } from 'src/shared/types/auth.types';
 
 @Injectable()

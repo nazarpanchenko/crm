@@ -4,16 +4,17 @@ import { randomInt } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 
+import { SALT_ROUNDS } from 'src/config/consts';
 import {
   TokenPayload,
   VerificationMessageTokenType,
 } from 'src/shared/types/auth.types';
 import { MailToken } from 'src/core/mail/entities/mail-token.entity';
 import { User } from 'src/users/entities/user.entity';
-import { SALT_ROUNDS } from 'src/config/consts';
 
 type GenerateTokenResponse = {
   token: string;
+  email?: string;
 };
 
 type VerifyTokenResult =

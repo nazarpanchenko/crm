@@ -8,12 +8,14 @@ import { Repository } from 'typeorm';
 
 import { AuthRequest } from 'src/shared/types/auth.types';
 import { User } from 'src/users/entities/user.entity';
+import { RefreshTokenService } from 'src/core/refresh-token/refresh-token.service'; // 👈 1. import
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    private readonly refreshTokenService: RefreshTokenService, // 👈 2. inject
     configService: ConfigService,
   ) {
     const secret = configService.get<string>('JWT_SECRET');
@@ -22,15 +24,32 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         ExtractJwt.fromAuthHeaderAsBearerToken(),
-        (req: Request) => req?.cookies?.access_token ?? null,
+        (req: Request) =>
+          (req.cookies as Record<string, string | undefined>).access_token ??
+          null,
       ]),
       secretOrKey: secret,
       ignoreExpiration: false,
+      passReqToCallback: true,
     });
   }
 
-  // jwt.strategy.ts
-  async validate(payload: { sub: string }): Promise<AuthRequest['user']> {
+  // 👈 3. req is first arg (because passReqToCallback: true)
+  async validate(
+    req: Request,
+    payload: { sub: string },
+  ): Promise<AuthRequest['user']> {
+    // 👈 4. extract token from cookie or Bearer header
+    const token =
+      (req.cookies as Record<string, string | undefined>).access_token ??
+      req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) throw new UnauthorizedException();
+
+    // 👈 5. check blocklist
+    const isRevoked = this.refreshTokenService.isTokenRevoked(token);
+    if (isRevoked) throw new UnauthorizedException('Token has been revoked');
+
     const user = await this.userRepo.findOne({
       where: { id: payload.sub },
       relations: ['memberships', 'memberships.workspace'],

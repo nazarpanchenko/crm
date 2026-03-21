@@ -29,7 +29,7 @@ export class WorkspacesService {
     private mailService: MailService,
   ) {}
 
-  async create(dto: CreateWorkspaceDto, creatorId: string) {
+  async create(dto: CreateWorkspaceDto, creatorId: string): Promise<Workspace> {
     const users = await this.userRepo.findByIds(dto.users.map((u) => u.id));
     const creator = await this.userRepo.findOneOrFail({
       where: { id: creatorId },
@@ -96,7 +96,7 @@ export class WorkspacesService {
     return { message: `Invitation sent to ${email}` };
   }
 
-  async findAll() {
+  async findAll(): Promise<Workspace[]> {
     return await this.workspaceRepo.find();
   }
 
@@ -105,6 +105,7 @@ export class WorkspacesService {
   }
 
   async remove(id: string): Promise<void> {
+    await this.membershipRepo.delete({ workspace: { id } });
     await this.workspaceRepo.delete(id);
   }
 }
