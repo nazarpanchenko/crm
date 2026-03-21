@@ -64,7 +64,7 @@ export class RefreshTokenService {
     throw new UnauthorizedException('Invalid refresh token');
   }
 
-  async revokeToken(token: string): Promise<void> {
+  async revokeRefreshToken(token: string): Promise<void> {
     const tokens = await this.refreshTokenRepo.find();
     for (const t of tokens) {
       const match = await bcrypt.compare(token, t.tokenHash);

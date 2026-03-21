@@ -8,14 +8,14 @@ import { Repository } from 'typeorm';
 
 import { AuthRequest } from 'src/shared/types/auth.types';
 import { User } from 'src/users/entities/user.entity';
-import { RefreshTokenService } from 'src/core/refresh-token/refresh-token.service'; // 👈 1. import
+import { RefreshTokenService } from 'src/core/refresh-token/refresh-token.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-    private readonly refreshTokenService: RefreshTokenService, // 👈 2. inject
+    private readonly refreshTokenService: RefreshTokenService,
     configService: ConfigService,
   ) {
     const secret = configService.get<string>('JWT_SECRET');
@@ -34,19 +34,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  // 👈 3. req is first arg (because passReqToCallback: true)
   async validate(
     req: Request,
     payload: { sub: string },
   ): Promise<AuthRequest['user']> {
-    // 👈 4. extract token from cookie or Bearer header
     const token =
       (req.cookies as Record<string, string | undefined>).access_token ??
       req.headers.authorization?.replace('Bearer ', '');
-
     if (!token) throw new UnauthorizedException();
 
-    // 👈 5. check blocklist
     const isRevoked = this.refreshTokenService.isTokenRevoked(token);
     if (isRevoked) throw new UnauthorizedException('Token has been revoked');
 

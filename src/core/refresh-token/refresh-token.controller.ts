@@ -6,9 +6,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { COOKIE_MAX_AGE } from '../../config/consts';
-import { RefreshTokenService } from './refresh-token.service';
-import { UsersService } from '../../users/users.service';
+
+import { COOKIE_MAX_AGE } from 'src/config/consts';
+import { RefreshTokenService } from 'src/core/refresh-token/refresh-token.service';
+import { UsersService } from 'src/users/users.service';
 
 @Controller('auth/refresh')
 export class RefreshTokenController {
@@ -35,7 +36,7 @@ export class RefreshTokenController {
 
   @Post('revoke')
   async revoke(@Body('refreshToken') refreshToken: string) {
-    await this.refreshTokenService.revokeToken(refreshToken);
+    await this.refreshTokenService.revokeRefreshToken(refreshToken);
     return { success: true };
   }
 
