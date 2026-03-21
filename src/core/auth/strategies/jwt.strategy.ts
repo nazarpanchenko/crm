@@ -19,7 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     configService: ConfigService,
   ) {
     const secret = configService.get<string>('JWT_SECRET');
-    if (!secret) throw new Error('JWT_SECRET is not defined');
+    if (!secret) throw new Error('JWT secret string is not defined');
 
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
@@ -41,16 +41,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const token =
       (req.cookies as Record<string, string | undefined>).access_token ??
       req.headers.authorization?.replace('Bearer ', '');
-    if (!token) throw new UnauthorizedException();
+    if (!token) {
+      throw new UnauthorizedException('JWT Token is missing in cookies');
+    }
 
     const isRevoked = this.refreshTokenService.isTokenRevoked(token);
-    if (isRevoked) throw new UnauthorizedException('Token has been revoked');
+    if (isRevoked) {
+      throw new UnauthorizedException('JWT token has been revoked');
+    }
 
     const user = await this.userRepo.findOne({
       where: { id: payload.sub },
       relations: ['memberships', 'memberships.workspace'],
     });
-    if (!user) throw new UnauthorizedException();
+    if (!user) throw new UnauthorizedException('User not found');
 
     return {
       sub: user.id,

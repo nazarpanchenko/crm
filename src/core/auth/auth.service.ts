@@ -50,7 +50,7 @@ type ValidateUserResponse = {
 };
 
 type VerifyMfaResponse = { mfaRequired: boolean };
-type VerifySecondaryMailResponse = { message: string };
+
 type ResetPasswordResponse = { message: string; newPassword: string };
 
 @Injectable()
@@ -104,27 +104,6 @@ export class AuthService {
 
     await this.mailTokenRepo.save(mailToken);
     return await this.mailService.sendSignUpConfirmation(user.email, token);
-  }
-
-  async confirmEmail(email: string, token: string): Promise<MailTokenResponse> {
-    const user = await this.userRepo.findOne({ where: { email } });
-    if (!user) throw new UnauthorizedException('Invalid email');
-
-    const record = await this.mailTokenRepo.findOne({
-      where: { user, type: VerificationMessageTokenType.MAIL },
-    });
-    if (
-      !record ||
-      record.expiresAt < new Date() ||
-      !(await bcrypt.compare(token, record.token))
-    ) {
-      throw new UnauthorizedException('Token expired or invalid');
-    }
-
-    user.emailVerified = true;
-    await this.userRepo.save(user);
-    await this.mailTokenRepo.delete(record.id);
-    return { message: 'Email verified successfully', token };
   }
 
   async requestMfa(user: User): Promise<VerifyMfaResponse> {
@@ -237,6 +216,27 @@ export class AuthService {
     return { message: 'Password reset successfully', newPassword };
   }
 
+  async confirmEmail(email: string, token: string): Promise<MailTokenResponse> {
+    const user = await this.userRepo.findOne({ where: { email } });
+    if (!user) throw new UnauthorizedException('Invalid email');
+
+    const record = await this.mailTokenRepo.findOne({
+      where: { user, type: VerificationMessageTokenType.MAIL },
+    });
+    if (
+      !record ||
+      record.expiresAt < new Date() ||
+      !(await bcrypt.compare(token, record.token))
+    ) {
+      throw new UnauthorizedException('Token expired or invalid');
+    }
+
+    user.emailVerified = true;
+    await this.userRepo.save(user);
+    await this.mailTokenRepo.delete(record.id);
+    return { message: 'Email verified successfully', token };
+  }
+
   async addSecondaryEmail(
     user: AuthRequest['user'],
     dto: AddSecondaryEmailDto,
@@ -278,28 +278,30 @@ export class AuthService {
   }
 
   async verifySecondaryEmail(
-    user: User,
+    user: AuthRequest['user'],
     dto: VerifySecondaryEmailDto,
-  ): Promise<VerifySecondaryMailResponse> {
+  ): Promise<MailTokenResponse> {
+    const userEntity = await this.userRepo.findOne({
+      where: { id: user?.sub },
+    });
+    if (!userEntity) throw new UnauthorizedException('User not found');
+
     const tokenPayload = await this.mailTokenService.validateToken(
-      user,
+      userEntity,
       dto.token,
       VerificationMessageTokenType.OTP,
     );
-    if (!tokenPayload) {
-      throw new UnauthorizedException('Invalid token payload');
-    }
+    if (!tokenPayload) throw new UnauthorizedException('Invalid token payload');
 
     const emailEntity = await this.userEmailRepo.findOne({
-      where: { email: tokenPayload.email, user: { id: user.id } },
+      where: { email: tokenPayload.email, user: { id: userEntity.id } },
     });
-    if (!emailEntity) {
+    if (!emailEntity)
       throw new UnauthorizedException('Email is missing in token payload');
-    }
 
     emailEntity.isVerified = true;
     await this.userEmailRepo.save(emailEntity);
-    return { message: 'Secondary email verified' };
+    return { message: 'Secondary email verified', token: dto.token };
   }
 
   async findUserByEmail(email: string): Promise<User | null> {
