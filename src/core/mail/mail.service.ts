@@ -57,4 +57,16 @@ export class MailService {
              Click <a href="${process.env.CLIENT_URL}/accept-invite?token=${token}&email=${email}">here</a> to accept the invitation and create your account.</p>`,
     });
   }
+
+  async sendSecondaryEmailVerification(
+    email: string,
+    token: string,
+  ): Promise<void> {
+    await this.transporter.sendMail({
+      from: process.env.NODEMAILER_USERNAME,
+      to: email,
+      subject: 'Verify your secondary email',
+      html: `<p>Please verify your secondary email by clicking <a href="${process.env.CLIENT_URL}/verify-email?email=${email}&token=${token}">here</a>.</p>`,
+    });
+  }
 }

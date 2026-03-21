@@ -35,7 +35,14 @@ export class MailTokenService {
     expirationMs: number,
     payload?: TokenPayload,
   ): Promise<GenerateTokenResponse> {
-    await this.mailTokenRepo.delete({ user: { id: user.id }, type });
+    // Ensure that user always has only one token
+    await this.mailTokenRepo
+      .createQueryBuilder()
+      .delete()
+      .from(MailToken)
+      .where('userId = :userId', { userId: user.id })
+      .andWhere('type = :type', { type })
+      .execute();
 
     const token: string = randomInt(100000, 999999).toString();
     const tokenHash: string = await bcrypt.hash(token, SALT_ROUNDS);

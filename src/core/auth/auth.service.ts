@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -18,6 +19,7 @@ import {
   SALT_ROUNDS,
 } from 'src/config/consts';
 import {
+  AuthRequest,
   VerificationMessageTokenType,
   WorkspaceRole,
 } from 'src/shared/types/auth.types';
@@ -241,28 +243,39 @@ export class AuthService {
     return { message: 'Password reset successfully' };
   }
 
-  async addSecondaryEmail(user: User, dto: AddSecondaryEmailDto) {
+  async addSecondaryEmail(
+    user: AuthRequest['user'],
+    dto: AddSecondaryEmailDto,
+  ) {
+    const userEntity = await this.userRepo.findOne({
+      where: { id: user?.sub },
+    });
+    if (!userEntity) {
+      throw new NotFoundException('User not found');
+    }
+
     const existing = await this.userEmailRepo.findOne({
       where: { email: dto.email },
     });
+
     if (existing) {
       throw new BadRequestException('Email already in use');
     }
 
-    const emailEntity = this.userEmailRepo.create({
+    await this.userEmailRepo.insert({
       email: dto.email,
-      user,
+      user: { id: userEntity.id },
       isPrimary: false,
       isVerified: false,
     });
 
-    await this.userEmailRepo.save(emailEntity);
-    await this.mailTokenService.generateToken(
-      user,
+    const { token } = await this.mailTokenService.generateToken(
+      userEntity,
       VerificationMessageTokenType.MAIL,
       Number(COOKIE_MAX_AGE),
       { email: dto.email },
     );
+    await this.mailService.sendSecondaryEmailVerification(dto.email, token);
     return { message: 'Verification email sent' };
   }
 

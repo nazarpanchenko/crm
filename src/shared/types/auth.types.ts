@@ -11,12 +11,14 @@ export enum VerificationMessageTokenType {
   INVITE = 'INVITE_MANAGER',
 }
 
-export type AuthRequest = Request & {
-  user?: {
-    sub: string;
-    emailVerified: boolean;
-    memberships: { workspaceId: string; role: WorkspaceRole }[];
-  };
+export type TokenPayload = { id?: string; email?: string };
+
+export type JwtPayload = {
+  sub: string;
+  emailVerified: boolean;
+  memberships: { workspaceId: string; role: WorkspaceRole }[];
 };
 
-export type TokenPayload = { id?: string; email?: string };
+export type AuthRequest = Omit<Request, 'user'> & {
+  user?: JwtPayload;
+};

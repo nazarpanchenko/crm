@@ -5,7 +5,6 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-
 import {
   type TokenPayload,
   VerificationMessageTokenType,
@@ -22,12 +21,10 @@ export class MailToken {
 
   @ManyToOne(() => User, (user) => user.mailTokens, {
     onDelete: 'CASCADE',
+    nullable: false,
   })
   @JoinColumn({ name: 'userId' })
   user!: User;
-
-  @Column('uuid')
-  userId!: string;
 
   @Column({ type: 'timestamptz' })
   expiresAt!: Date;

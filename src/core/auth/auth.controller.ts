@@ -13,6 +13,7 @@ import {
   COOKIE_MAX_AGE,
   JWT_REFRESH_TOKEN_EXPIRES_IN,
 } from 'src/config/consts';
+import { type AuthRequest as AddSecondaryMailRequest } from 'src/shared/types/auth.types';
 import { User } from 'src/users/entities/user.entity';
 import { AuthService } from 'src/core/auth/auth.service';
 import { SignupDto } from 'src/core/auth/dto/signup.dto';
@@ -119,9 +120,9 @@ export class AuthController {
   @Post('email/add-secondary')
   @UseGuards(JwtAuthGuard)
   async addSecondaryEmail(
-    @Req() req: Request,
+    @Req() req: AddSecondaryMailRequest,
     @Body() dto: AddSecondaryEmailDto,
   ) {
-    return this.authService.addSecondaryEmail(req.user as User, dto);
+    return this.authService.addSecondaryEmail(req.user, dto);
   }
 }
