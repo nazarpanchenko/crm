@@ -4,6 +4,7 @@ import {
   Body,
   Res,
   UnauthorizedException,
+  HttpCode,
 } from '@nestjs/common';
 import type { Response } from 'express';
 
@@ -19,6 +20,7 @@ export class RefreshTokenController {
   ) {}
 
   @Post()
+  @HttpCode(200)
   async refresh(
     @Body('refreshToken') refreshToken: string,
     @Res({ passthrough: true }) res: Response,
@@ -35,12 +37,14 @@ export class RefreshTokenController {
   }
 
   @Post('revoke')
+  @HttpCode(200)
   async revoke(@Body('refreshToken') refreshToken: string) {
     await this.refreshTokenService.revokeRefreshToken(refreshToken);
     return { success: true };
   }
 
   @Post('create')
+  @HttpCode(201)
   async create(@Body('userId') userId: string) {
     const user = await this.userService.findOne(userId);
     if (!user) {

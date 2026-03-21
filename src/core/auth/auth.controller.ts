@@ -24,6 +24,7 @@ import { ForgotPasswordDto } from 'src/core/auth/dto/forgot-password.dto';
 import { ResetPasswordDto } from 'src/core/auth/dto/reset-password.dto';
 import { AddSecondaryEmailDto } from 'src/core/mail/dto/secondary-email.dto';
 import { RefreshTokenService } from 'src/core/refresh-token/refresh-token.service';
+import { VerifySecondaryEmailDto } from '../mail/dto/verify-secondary-email.dto';
 
 interface AuthRequest extends Request {
   user: User;
@@ -41,7 +42,9 @@ export class AuthController {
     return this.authService.signup(dto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('confirm-email')
+  @HttpCode(200)
   confirmEmail(@Body() body: { email: string; token: string }) {
     return this.authService.confirmEmail(body.email, body.token);
   }
@@ -104,11 +107,15 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @UseGuards(LocalAuthGuard)
+  @HttpCode(200)
   forgotPassword(@Body() body: ForgotPasswordDto) {
     return this.authService.requestPasswordReset(body.email);
   }
 
   @Post('reset-password')
+  @UseGuards(LocalAuthGuard)
+  @HttpCode(200)
   resetPassword(@Body() body: ResetPasswordDto) {
     return this.authService.resetPassword(
       body.email,
@@ -118,11 +125,22 @@ export class AuthController {
   }
 
   @Post('email/add-secondary')
+  @HttpCode(200)
   @UseGuards(JwtAuthGuard)
   async addSecondaryEmail(
     @Req() req: AddSecondaryMailRequest,
     @Body() dto: AddSecondaryEmailDto,
   ) {
     return this.authService.addSecondaryEmail(req.user, dto);
+  }
+
+  @Post('email/confirm-secondary')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  async verifySecondaryEmail(
+    @Req() req: User,
+    @Body() dto: VerifySecondaryEmailDto,
+  ) {
+    return this.authService.verifySecondaryEmail(req, dto);
   }
 }

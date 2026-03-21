@@ -7,6 +7,7 @@ import {
   Delete,
   UseGuards,
   Req,
+  HttpCode,
 } from '@nestjs/common';
 
 import { WorkspaceRole, type AuthRequest } from 'src/shared/types/auth.types';
@@ -22,14 +23,17 @@ export class WorkspacesController {
   constructor(private readonly workspaceService: WorkspacesService) {}
 
   @Post()
+  @HttpCode(201)
   @UseGuards(JwtAuthGuard, MailVerifiedGuard)
   async create(@Body() dto: CreateWorkspaceDto, @Req() req: AuthRequest) {
     return this.workspaceService.create(dto, req.user!.sub);
   }
 
   @Post(':workspaceId/invite')
+  @HttpCode(200)
   @UseGuards(
     JwtAuthGuard,
+    MailVerifiedGuard,
     WorkspaceAccessGuard,
     WorkspaceRoleGuardFactory(WorkspaceRole.ADMIN),
   )
@@ -40,20 +44,23 @@ export class WorkspacesController {
     return this.workspaceService.inviteManager(workspaceId, body.email);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, MailVerifiedGuard)
+  @HttpCode(200)
   @Get()
   findAll() {
     return this.workspaceService.findAll();
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard, MailVerifiedGuard)
   findOne(@Param('id') id: string) {
     return this.workspaceService.findOne(id);
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @HttpCode(204)
+  @UseGuards(JwtAuthGuard, MailVerifiedGuard)
   remove(@Param('id') id: string) {
     return this.workspaceService.remove(id);
   }

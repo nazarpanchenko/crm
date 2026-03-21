@@ -20,6 +20,7 @@ import {
 } from 'src/config/consts';
 import {
   AuthRequest,
+  MailTokenResponse,
   VerificationMessageTokenType,
   WorkspaceRole,
 } from 'src/shared/types/auth.types';
@@ -48,10 +49,9 @@ type ValidateUserResponse = {
   lastName: string;
 };
 
-type VerifyEmailResponse = { message: string };
 type VerifyMfaResponse = { mfaRequired: boolean };
-type RequestPasswordResetResponse = { message: string };
-type ResetPasswordResponse = { message: string };
+type VerifySecondaryMailResponse = { message: string };
+type ResetPasswordResponse = { message: string; newPassword: string };
 
 @Injectable()
 export class AuthService {
@@ -103,14 +103,10 @@ export class AuthService {
     });
 
     await this.mailTokenRepo.save(mailToken);
-    await this.mailService.sendSignUpConfirmation(user.email, token);
-    return { message: 'Confirmation email sent' };
+    return await this.mailService.sendSignUpConfirmation(user.email, token);
   }
 
-  async confirmEmail(
-    email: string,
-    token: string,
-  ): Promise<VerifyEmailResponse> {
+  async confirmEmail(email: string, token: string): Promise<MailTokenResponse> {
     const user = await this.userRepo.findOne({ where: { email } });
     if (!user) throw new UnauthorizedException('Invalid email');
 
@@ -128,7 +124,7 @@ export class AuthService {
     user.emailVerified = true;
     await this.userRepo.save(user);
     await this.mailTokenRepo.delete(record.id);
-    return { message: 'Email verified successfully' };
+    return { message: 'Email verified successfully', token };
   }
 
   async requestMfa(user: User): Promise<VerifyMfaResponse> {
@@ -197,9 +193,7 @@ export class AuthService {
     return new UserDto(user);
   }
 
-  async requestPasswordReset(
-    email: string,
-  ): Promise<RequestPasswordResetResponse> {
+  async requestPasswordReset(email: string): Promise<MailTokenResponse> {
     const user = await this.userRepo.findOne({ where: { email } });
     if (!user) throw new UnauthorizedException('User not found');
 
@@ -217,7 +211,7 @@ export class AuthService {
 
     await this.mailTokenRepo.save(resetToken);
     await this.mailService.sendOtp(user.email, token);
-    return { message: 'Password reset token sent' };
+    return { message: 'Password reset token sent', token };
   }
 
   async resetPassword(
@@ -240,13 +234,13 @@ export class AuthService {
     user.passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
     await this.userRepo.save(user);
     await this.mailTokenRepo.delete(record.id as string);
-    return { message: 'Password reset successfully' };
+    return { message: 'Password reset successfully', newPassword };
   }
 
   async addSecondaryEmail(
     user: AuthRequest['user'],
     dto: AddSecondaryEmailDto,
-  ) {
+  ): Promise<MailTokenResponse> {
     const userEntity = await this.userRepo.findOne({
       where: { id: user?.sub },
     });
@@ -254,12 +248,16 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
-    const existing = await this.userEmailRepo.findOne({
-      where: { email: dto.email },
+    const existingEmails = await this.userEmailRepo.find({
+      where: { user: { id: user?.sub } },
     });
 
-    if (existing) {
+    if (existingEmails.some(({ email }) => email === dto.email)) {
       throw new BadRequestException('Email already in use');
+    }
+
+    if (existingEmails.length >= 1) {
+      throw new BadRequestException('Only one secondary email is allowed');
     }
 
     await this.userEmailRepo.insert({
@@ -275,11 +273,14 @@ export class AuthService {
       Number(COOKIE_MAX_AGE),
       { email: dto.email },
     );
-    await this.mailService.sendSecondaryEmailVerification(dto.email, token);
-    return { message: 'Verification email sent' };
+    await this.mailService.sendSecondaryEmailInvitation(dto.email, token);
+    return { message: 'Verification email sent', token };
   }
 
-  async verifySecondaryEmail(user: User, dto: VerifySecondaryEmailDto) {
+  async verifySecondaryEmail(
+    user: User,
+    dto: VerifySecondaryEmailDto,
+  ): Promise<VerifySecondaryMailResponse> {
     const tokenPayload = await this.mailTokenService.validateToken(
       user,
       dto.token,

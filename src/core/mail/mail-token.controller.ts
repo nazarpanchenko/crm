@@ -1,6 +1,12 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import {
+  Controller,
+  Post,
+  Body,
+  UnauthorizedException,
+  HttpCode,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 import { JWT_ACCESS_TOKEN_EXPIRES_IN } from 'src/config/consts';
 import { VerificationMessageTokenType } from 'src/shared/types/auth.types';
@@ -16,6 +22,7 @@ export class MailTokenController {
   ) {}
 
   @Post('generate')
+  @HttpCode(200)
   async generate(
     @Body() body: { email: string; type: VerificationMessageTokenType },
   ) {
@@ -35,6 +42,7 @@ export class MailTokenController {
   }
 
   @Post('validate')
+  @HttpCode(200)
   async validate(
     @Body()
     body: {
@@ -59,11 +67,11 @@ export class MailTokenController {
       throw new UnauthorizedException('Token is invalid');
     }
 
-    await this.mailTokenService.deleteToken(record);
-    return { message: 'Token valid' };
+    return await this.mailTokenService.deleteToken(record);
   }
 
   @Post('verify-email')
+  @HttpCode(200)
   async verifyEmail(@Body() body: { email: string; token: string }) {
     const user = await this.userRepo.findOne({
       where: { email: body.email },
@@ -77,6 +85,7 @@ export class MailTokenController {
       body.token,
       VerificationMessageTokenType.OTP,
     );
+
     if (result.status === 'invalid') {
       throw new UnauthorizedException('Invalid token');
     }

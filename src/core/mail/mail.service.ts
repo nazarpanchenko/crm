@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 
 import { NODEMAILER_PORT, OTP_EXPIRES_IN } from 'src/config/consts';
+import { MailTokenResponse } from 'src/shared/types/auth.types';
 import { getParsedExpiryDateString } from 'src/shared/utils/string-parser.utils';
 
 @Injectable()
@@ -24,16 +25,20 @@ export class MailService {
     });
   }
 
-  async sendSignUpConfirmation(email: string, token: string): Promise<void> {
+  async sendSignUpConfirmation(
+    email: string,
+    token: string,
+  ): Promise<MailTokenResponse> {
     await this.transporter.sendMail({
       from: process.env.NODEMAILER_USERNAME,
       to: email,
       subject: 'Verify your email',
       html: `<p>Please verify your email by clicking <a href="${process.env.CLIENT_URL}/verify-email?email=${email}&token=${token}">here</a>.</p>`,
     });
+    return { message: 'Email verification sent', token };
   }
 
-  async sendOtp(email: string, otp: string): Promise<void> {
+  async sendOtp(email: string, otp: string): Promise<MailTokenResponse> {
     await this.transporter.sendMail({
       from: process.env.NODEMAILER_USERNAME,
       to: email,
@@ -42,31 +47,34 @@ export class MailService {
         OTP_EXPIRES_IN,
       )}.</p>`,
     });
+    return { message: 'Email verification sent', token: otp };
   }
 
   async sendInvitation(
     email: string,
     token: string,
     workspaceName: string,
-  ): Promise<void> {
+  ): Promise<MailTokenResponse> {
     await this.transporter.sendMail({
       from: process.env.NODEMAILER_USERNAME,
       to: email,
       subject: `Invitation to join workspace: ${workspaceName}`,
       html: `<p>You have been invited to join the workspace <b>${workspaceName}</b>.<br>
-             Click <a href="${process.env.CLIENT_URL}/accept-invite?token=${token}&email=${email}">here</a> to accept the invitation and create your account.</p>`,
+             Click <a href="${process.env.CLIENT_URL}/confirm-email?token=${token}&email=${email}">here</a> to accept the invitation and create your account.</p>`,
     });
+    return { message: 'Email verification sent', token };
   }
 
-  async sendSecondaryEmailVerification(
+  async sendSecondaryEmailInvitation(
     email: string,
     token: string,
-  ): Promise<void> {
+  ): Promise<MailTokenResponse> {
     await this.transporter.sendMail({
       from: process.env.NODEMAILER_USERNAME,
       to: email,
       subject: 'Verify your secondary email',
-      html: `<p>Please verify your secondary email by clicking <a href="${process.env.CLIENT_URL}/verify-email?email=${email}&token=${token}">here</a>.</p>`,
+      html: `<p>Please verify your secondary email by clicking <a href="${process.env.CLIENT_URL}/confirm-secondary-email?email=${email}&token=${token}">here</a>.</p>`,
     });
+    return { message: 'Email verification sent', token };
   }
 }

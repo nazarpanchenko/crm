@@ -22,3 +22,8 @@ export type JwtPayload = {
 export type AuthRequest = Omit<Request, 'user'> & {
   user?: JwtPayload;
 };
+
+export type MailTokenResponse = {
+  message: string;
+  token: string;
+};

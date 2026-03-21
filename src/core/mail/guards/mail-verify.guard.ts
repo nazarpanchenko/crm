@@ -13,7 +13,7 @@ export class MailVerifiedGuard implements CanActivate {
     const request: AuthRequest = context.switchToHttp().getRequest();
     if (!request.user?.emailVerified) {
       throw new ForbiddenException(
-        'Please verify your email to continue using this application',
+        'This email has not been verified yet. Please verify it to proceed',
       );
     }
     return true;
