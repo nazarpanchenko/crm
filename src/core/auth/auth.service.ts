@@ -49,7 +49,7 @@ type ValidateUserResponse = {
   lastName: string;
 };
 
-type VerifyMfaResponse = { mfaRequired: boolean };
+type VerifyMfaResponse = { message: string };
 
 type ResetPasswordResponse = { message: string; newPassword: string };
 
@@ -75,7 +75,10 @@ export class AuthService {
       passwordHash,
       firstName: dto.firstName,
       lastName: dto.lastName,
-      emailVerified: false,
+      emailVerified: true,
+      emailVerificationExpiresAt: new Date(
+        Date.now() + Number(PASSWORD_RESET_EMAIL_EXPIRES_IN) * 60 * 1000,
+      ),
     });
     await this.userRepo.save(user);
 
@@ -92,6 +95,11 @@ export class AuthService {
     });
     await this.membershipRepo.save(membership);
 
+    const token = await this.saveSignupVerificationToken(user);
+    return await this.mailService.sendSignUpConfirmation(user.email, token);
+  }
+
+  async saveSignupVerificationToken(user: User): Promise<string> {
     const token = randomBytes(32).toString('hex'); // 64-character secure token
     const tokenHash = await bcrypt.hash(token, SALT_ROUNDS);
     const expiresAt = new Date(Date.now() + Number(COOKIE_MAX_AGE));
@@ -101,12 +109,11 @@ export class AuthService {
       expiresAt,
       type: VerificationMessageTokenType.MAIL,
     });
-
     await this.mailTokenRepo.save(mailToken);
-    return await this.mailService.sendSignUpConfirmation(user.email, token);
+    return token;
   }
 
-  async requestMfa(user: User): Promise<VerifyMfaResponse> {
+  async requestMfaLogin(user: User): Promise<VerifyMfaResponse> {
     const otp = randomInt(100000, 999999).toString();
     user.otpHash = await bcrypt.hash(otp, SALT_ROUNDS);
     user.otpExpires = new Date(
@@ -114,10 +121,13 @@ export class AuthService {
     );
     await this.userRepo.save(user);
     await this.mailService.sendOtp(user.email, otp);
-    return { mfaRequired: true };
+    return { message: '6-digit verification code was sent to your email' };
   }
 
-  async verifyMfa(email: string, otp: string): Promise<UseMfaLogInResponse> {
+  async verifyMfaLogin(
+    email: string,
+    otp: string,
+  ): Promise<UseMfaLogInResponse> {
     const user = await this.userRepo.findOne({
       where: { email },
       relations: ['memberships', 'memberships.workspace'],
@@ -173,7 +183,10 @@ export class AuthService {
   }
 
   async requestPasswordReset(email: string): Promise<MailTokenResponse> {
-    const user = await this.userRepo.findOne({ where: { email } });
+    const user = await this.userRepo.findOne({
+      where: { email },
+      select: ['id'],
+    });
     if (!user) throw new UnauthorizedException('User not found');
 
     const token = randomBytes(32).toString('hex'); // 64-character secure token
@@ -217,11 +230,14 @@ export class AuthService {
   }
 
   async confirmEmail(email: string, token: string): Promise<MailTokenResponse> {
-    const user = await this.userRepo.findOne({ where: { email } });
+    const user = await this.userRepo.findOne({
+      where: { email },
+    });
     if (!user) throw new UnauthorizedException('Invalid email');
 
     const record = await this.mailTokenRepo.findOne({
       where: { user, type: VerificationMessageTokenType.MAIL },
+      select: ['id', 'token', 'expiresAt'],
     });
     if (
       !record ||
@@ -250,6 +266,7 @@ export class AuthService {
 
     const existingEmails = await this.userEmailRepo.find({
       where: { user: { id: user?.sub } },
+      select: ['id', 'email'],
     });
 
     if (existingEmails.some(({ email }) => email === dto.email)) {
@@ -295,6 +312,7 @@ export class AuthService {
 
     const emailEntity = await this.userEmailRepo.findOne({
       where: { email: tokenPayload.email, user: { id: userEntity.id } },
+      select: ['id'],
     });
     if (!emailEntity)
       throw new UnauthorizedException('Email is missing in token payload');
@@ -307,13 +325,24 @@ export class AuthService {
   async findUserByEmail(email: string): Promise<User | null> {
     const user = await this.userRepo.findOne({
       where: { email },
+      select: ['id'],
     });
     if (user) return user;
 
     const emailEntity = await this.userEmailRepo.findOne({
       where: { email, isVerified: true },
+      select: ['id', 'email'],
       relations: ['user'],
     });
     return emailEntity?.user || null;
+  }
+
+  isEmailVerified(user: User): boolean {
+    if (!user.emailVerified) return false;
+
+    if (!user.emailVerificationExpiresAt) {
+      return true;
+    }
+    return user.emailVerificationExpiresAt > new Date();
   }
 }

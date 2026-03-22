@@ -47,16 +47,16 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   login(@Req() req: AuthRequest) {
-    return this.authService.requestMfa(req.user);
+    return this.authService.requestMfaLogin(req.user);
   }
 
-  @Post('mfa')
+  @Post('verify-mfa')
   @HttpCode(200)
   async verifyMfa(
     @Body() dto: MfaDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { accessToken, refreshToken } = await this.authService.verifyMfa(
+    const { accessToken, refreshToken } = await this.authService.verifyMfaLogin(
       dto.email,
       dto.otp,
     );

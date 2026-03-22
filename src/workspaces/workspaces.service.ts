@@ -67,10 +67,14 @@ export class WorkspacesService {
     });
     if (!workspace) throw new NotFoundException('Workspace not found');
 
-    const user = await this.userRepo.findOne({ where: { email } });
+    const user = await this.userRepo.findOne({
+      where: { email },
+    });
+
     if (user) {
       const existing = await this.membershipRepo.findOne({
         where: { user: { id: user.id }, workspace: { id: workspaceId } },
+        select: ['id'],
       });
       if (existing) return { message: 'User is already a member' };
 
@@ -97,11 +101,14 @@ export class WorkspacesService {
   }
 
   async findAll(): Promise<Workspace[]> {
-    return await this.workspaceRepo.find();
+    return await this.workspaceRepo.find({ select: ['id', 'ownerId', 'name'] });
   }
 
   async findOne(id: string): Promise<Workspace | null> {
-    return await this.workspaceRepo.findOne({ where: { id } });
+    return await this.workspaceRepo.findOne({
+      where: { id },
+      select: ['id', 'ownerId', 'name'],
+    });
   }
 
   async remove(id: string): Promise<void> {

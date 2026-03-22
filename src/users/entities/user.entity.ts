@@ -25,8 +25,11 @@ export class User {
   @Column()
   lastName!: string;
 
-  @Column({ default: false })
+  @Column({ default: true })
   emailVerified!: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  emailVerificationExpiresAt!: Date | null;
 
   @Column({ type: 'varchar', nullable: true })
   otpHash!: string | null;

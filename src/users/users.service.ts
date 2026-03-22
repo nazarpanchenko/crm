@@ -20,11 +20,16 @@ export class UsersService {
   ) {}
 
   async findAll(): Promise<User[]> {
-    return await this.userRepository.find();
+    return await this.userRepository.find({
+      select: ['id', 'email', 'firstName', 'lastName', 'emailVerified'],
+    });
   }
 
   async findOne(id: string): Promise<User | null> {
-    return await this.userRepository.findOne({ where: { id } });
+    return await this.userRepository.findOne({
+      where: { id },
+      select: ['id', 'email', 'firstName', 'lastName', 'emailVerified'],
+    });
   }
 
   async remove(id: string): Promise<void> {
@@ -33,6 +38,7 @@ export class UsersService {
 
     const ownedWorkspaces = await this.workspaceRepo.find({
       where: { ownerId: id },
+      select: ['id', 'ownerId', 'name'],
     });
     for (const workspace of ownedWorkspaces) {
       await this.membershipRepo.delete({
@@ -40,7 +46,6 @@ export class UsersService {
       });
       await this.workspaceRepo.delete(workspace.id);
     }
-
     await this.userRepository.delete(id);
   }
 }

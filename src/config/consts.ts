@@ -9,7 +9,7 @@ export const JWT_REFRESH_TOKEN_EXPIRES_IN =
   process.env.JWT_REFRESH_TOKEN_EXPIRES_IN ?? 600000;
 
 export const PASSWORD_RESET_EMAIL_EXPIRES_IN =
-  process.env.PASSWORD_RESET_EMAIL_EXPIRES_IN ?? 30000;
+  process.env.PASSWORD_RESET_EMAIL_EXPIRES_IN ?? 3;
 
 export const OTP_EXPIRES_IN = process.env.OTP_EXPIRES_IN ?? '5m';
 
