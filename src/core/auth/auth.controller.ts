@@ -95,6 +95,7 @@ export class AuthController {
     res.clearCookie('refresh_token', cookieOptions);
 
     if (accessToken) this.refreshTokenService.revokeAccessToken(accessToken);
+
     if (refreshToken) {
       await this.refreshTokenService.revokeRefreshToken(refreshToken);
     }

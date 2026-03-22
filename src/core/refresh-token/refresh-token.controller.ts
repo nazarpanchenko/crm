@@ -19,30 +19,6 @@ export class RefreshTokenController {
     private userService: UsersService,
   ) {}
 
-  @Post()
-  @HttpCode(200)
-  async refresh(
-    @Body('refreshToken') refreshToken: string,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const accessToken =
-      await this.refreshTokenService.refreshAccessToken(refreshToken);
-    res.cookie('access_token', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict' as const,
-      path: '/',
-    });
-    return { success: true };
-  }
-
-  @Post('revoke')
-  @HttpCode(200)
-  async revoke(@Body('refreshToken') refreshToken: string) {
-    await this.refreshTokenService.revokeRefreshToken(refreshToken);
-    return { success: true };
-  }
-
   @Post('create')
   @HttpCode(201)
   async create(@Body('userId') userId: string) {
@@ -56,5 +32,27 @@ export class RefreshTokenController {
       COOKIE_MAX_AGE as number,
     );
     return { refreshToken: token };
+  }
+
+  @Post()
+  @HttpCode(204)
+  async refresh(
+    @Body('refreshToken') refreshToken: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const accessToken =
+      await this.refreshTokenService.refreshAccessToken(refreshToken);
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict' as const,
+      path: '/',
+    });
+  }
+
+  @Post('revoke')
+  @HttpCode(204)
+  async revoke(@Body('refreshToken') refreshToken: string) {
+    await this.refreshTokenService.revokeRefreshToken(refreshToken);
   }
 }
